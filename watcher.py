@@ -4,6 +4,8 @@ from ai import analyze_image
 from actions import rename_and_move
 import time
 
+WATCH_FOLDER = "watched"
+observer = None
 
 class Watcher(FileSystemEventHandler):
     def on_created(self, event):
@@ -19,19 +21,37 @@ class Watcher(FileSystemEventHandler):
             rename_and_move(event.src_path, result)
 
 
-if __name__ == "__main__":
-    path = "watched"
+def start_watching():
+    global observer
+
+    if observer is not None:
+        return
 
     observer = Observer()
-    observer.schedule(Watcher(), path, recursive=False)
+    observer.schedule(Watcher(), WATCH_FOLDER, recursive=False)
     observer.start()
 
-    print(f"Watching folder: {path}")
+    print(f"Watching folder: {WATCH_FOLDER}")
+
+
+def stop_watching():
+    global observer
+
+    if observer is None:
+        return
+
+    observer.stop()
+    observer.join()
+    observer = None
+
+    print("Stopped watching.")
+
+
+if __name__ == "__main__":
+    start_watching()
 
     try:
         while True:
             time.sleep(0.5)
     except KeyboardInterrupt:
-        observer.stop()
-
-    observer.join()
+        stop_watching()
