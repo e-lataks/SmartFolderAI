@@ -3,8 +3,19 @@ from watchdog.events import FileSystemEventHandler
 from ai import analyze_image
 from actions import rename_and_move
 import time
+import json
 
-WATCH_FOLDER = "watched"
+def get_watch_folder():
+    try:
+        with open("data/config.json", "r", encoding="utf-8") as file:
+            config = json.load(file)
+
+        return config.get("watch_folder", "watched")
+
+    except FileNotFoundError:
+        return "watched"
+
+
 observer = None
 
 class Watcher(FileSystemEventHandler):
@@ -28,10 +39,17 @@ def start_watching():
         return
 
     observer = Observer()
-    observer.schedule(Watcher(), WATCH_FOLDER, recursive=False)
+    watch_folder = get_watch_folder()
+
+    observer.schedule(
+        Watcher(),
+        watch_folder,
+        recursive=False
+    )
+
     observer.start()
 
-    print(f"Watching folder: {WATCH_FOLDER}")
+    print(f"Watching folder: {watch_folder}")
 
 
 def stop_watching():
