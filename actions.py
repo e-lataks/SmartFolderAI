@@ -22,7 +22,7 @@ def rename_and_move(file_path, result):
     config = get_config()
 
     watch_folder = config.get("watch_folder", "watched")
-    sort_into_folders = config.get("sort_into_fodlers", False)
+    sort_into_folders = config.get("sort_into_folders", False)
 
     extension = os.path.splitext(file_path)[1]
 

@@ -11,7 +11,7 @@ load_dotenv()
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 
-def analyze_image(image_path):
+def analyze_image(image_path, folders):
     print(f"AI received image: {image_path}")
 
     time.sleep(1)
@@ -20,32 +20,39 @@ def analyze_image(image_path):
 
     if mime_type is None:
         print("Unsupported file type.")
-        return
+        return None
 
     with open(image_path, "rb") as file:
         image = file.read()
 
-        response = client.models.generate_content(
-        model="gemini-3.6-flash",
-        contents=[
-            """
+    prompt = f"""
 You are an AI file organizer.
 Analyze this image and reply ONLY with valid JSON.
 
 Format:
-{
-  "filename": "...",
-  "folder": "..."
-}
+{{
+    "filename": "...",
+    "folder": "..."
+}}
+
+Available folders:
+{folders}
 
 Rules:
-- filename should be short.
+- Filename should be short and descriptive.
 - Do not include the file extension.
-- folder can contain subfolders using "/".
+- You MUST choose exactly one folder from Available folders.
+- NEVER create a new folder name.
+- Folder must exactly match one of the provided folder names.
 - No explanations.
 - No markdown.
 - JSON only.
-""",
+"""
+
+    response = client.models.generate_content(
+        model="gemini-3.6-flash",
+        contents=[
+            prompt,
             types.Part.from_bytes(
                 data=image,
                 mime_type=mime_type

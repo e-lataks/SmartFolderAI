@@ -1,4 +1,16 @@
 {
-    "watch_folder": "C:/Users/emikl/Downloads",
-    "sort_into_folders": false
+    "watch_folder": "D:/Stardance-Challenge",
+    "sort_into_folders": true,
+    "folders": [
+        "Animals",
+        "Memes",
+        "Art",
+        "Food",
+        "Nature",
+        "Games",
+        "Screenshots",
+        "Study",
+        "Sports",
+        "Other"
+    ]
 }
