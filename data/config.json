@@ -1,6 +1,6 @@
 {
-    "watch_folder": "D:/Stardance-Challenge",
-    "sort_into_folders": true,
+    "watch_folder": "C:/",
+    "sort_into_folders": false,
     "folders": [
         "Animals",
         "Memes",

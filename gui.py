@@ -1,5 +1,6 @@
 import sys
 import json
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QApplication,
     QWidget,
@@ -19,51 +20,86 @@ from watcher import start_watching, stop_watching
 def run():
     app = QApplication(sys.argv)
 
+    with open("style.qss", "r", encoding="utf-8") as file:
+        app.setStyleSheet(file.read())
+
     window = QWidget()
     window.setWindowTitle("SmartFolder AI")
     window.resize(600, 400)
 
     stack = QStackedWidget()
 
-
     main_page = QWidget()
     layout = QVBoxLayout(main_page)
+
+    layout.setContentsMargins(50, 40, 50, 40)
+    layout.setSpacing(12)
 
     title = QLabel("SmartFolder AI")
     status = QLabel("Stopped")
 
+    title.setObjectName("title")
+    status.setObjectName("status")
+
     start_button = QPushButton("Start")
+    start_button.setObjectName("startButton")
+
     stop_button = QPushButton("Stop")
     history_button = QPushButton("History")
     settings_button = QPushButton("Settings")
 
     stop_button.setEnabled(False)
 
-    layout.addWidget(title)
-    layout.addWidget(status)
+    layout.addStretch()
+
+    layout.addWidget(title, alignment=Qt.AlignCenter)
+    layout.addWidget(status, alignment=Qt.AlignCenter)
+
+    layout.addSpacing(20)
+
     layout.addWidget(start_button)
     layout.addWidget(stop_button)
-    layout.addWidget(history_button)
-    layout.addWidget(settings_button)
 
+    buttons_layout = QHBoxLayout()
+    buttons_layout.setSpacing(10)
+
+    buttons_layout.addWidget(history_button)
+    buttons_layout.addWidget(settings_button)
+
+    layout.addLayout(buttons_layout)
+
+    layout.addStretch()
 
     history_page = QWidget()
     history_layout = QVBoxLayout(history_page)
 
     back_button = QPushButton("Back")
     history_title = QLabel("History")
-    history_list = QLabel()
+    history_title.setObjectName("pageTitle")
+    history_list = QListWidget()
 
     history_layout.addWidget(back_button)
     history_layout.addWidget(history_title)
     history_layout.addWidget(history_list)
 
-
     settings_page = QWidget()
     settings_layout = QVBoxLayout(settings_page)
 
+    settings_layout.setContentsMargins(35, 25, 35, 25)
+    settings_layout.setSpacing(10)
+
     settings_back_button = QPushButton("Back")
+
     settings_title = QLabel("Settings")
+    settings_title.setObjectName("pageTitle")
+
+    settings_layout.addWidget(settings_back_button)
+    settings_layout.addWidget(settings_title)
+    settings_layout.addSpacing(15)
+
+
+    general_label = QLabel("GENERAL")
+    general_label.setObjectName("sectionTitle")
 
     folder_label = QLabel("Watched folder:")
 
@@ -72,10 +108,25 @@ def run():
 
     choose_folder_button = QPushButton("Choose folder")
 
+    folder_layout = QHBoxLayout()
+    folder_layout.addWidget(folder_input)
+    folder_layout.addWidget(choose_folder_button)
+
+    settings_layout.addWidget(general_label)
+    settings_layout.addWidget(folder_label)
+    settings_layout.addLayout(folder_layout)
+
+    settings_layout.addSpacing(15)
+
+
+    sorting_label = QLabel("AI SORTING")
+    sorting_label.setObjectName("sectionTitle")
+
     sort_checkbox = QCheckBox("Sort files into AI folders")
     sort_checkbox.setChecked(False)
 
     folders_label = QLabel("Available folders:")
+
     folders_list = QListWidget()
 
     new_folder_input = QLineEdit()
@@ -89,19 +140,18 @@ def run():
     folder_buttons_layout.addWidget(add_folder_button)
     folder_buttons_layout.addWidget(remove_folder_button)
 
-    save_setting_button = QPushButton("Save")
-
-    settings_layout.addWidget(settings_back_button)
-    settings_layout.addWidget(settings_title)
-    settings_layout.addWidget(folder_label)
-    settings_layout.addWidget(folder_input)
-    settings_layout.addWidget(choose_folder_button)
+    settings_layout.addWidget(sorting_label)
     settings_layout.addWidget(sort_checkbox)
     settings_layout.addWidget(folders_label)
     settings_layout.addWidget(folders_list)
     settings_layout.addLayout(folder_buttons_layout)
-    settings_layout.addWidget(save_setting_button)
 
+    settings_layout.addStretch()
+
+    save_setting_button = QPushButton("Save")
+    save_setting_button.setObjectName("saveButton")
+
+    settings_layout.addWidget(save_setting_button)
 
     def choose_folder():
         folder = QFileDialog.getExistingDirectory(
@@ -181,7 +231,6 @@ def run():
 
         print("Settings saved:", settings)
 
-
     def start():
         start_watching()
 
@@ -196,40 +245,39 @@ def run():
         start_button.setEnabled(True)
         stop_button.setEnabled(False)
 
-
     def load_history():
         try:
             with open("data/history.json", "r", encoding="utf-8") as file:
                 history = json.load(file)
 
             if not history:
-                history_list.setText("History is empty")
+                history_list.clear()
+                history_list.addItem("History is empty")
                 return
 
-            text = ""
+            history_list.clear()
 
             for item in reversed(history):
-                text += (
-                    f"Time: {item['time']}\n"
-                    f"Old name: {item['old_name']}\n"
-                    f"New name: {item['new_name']}\n"
-                    f"Location: {item.get('watch_folder', 'Unknown')}\n"
-                    f"AI Category: {item['folder']}\n"
-                    f"{'-' * 35}\n"
+                text = (
+                    f"{item['new_name']}\n"
+                    f"From: {item['old_name']}\n"
+                    f"Category: {item['folder']}\n"
+                    f"{item['time']}"
                 )
 
-            history_list.setText(text)
+                history_list.addItem(text)
 
         except FileNotFoundError:
-            history_list.setText("history.json not found.")
+            history_list.clear()
+            history_list.addItem("history.json not found.")
 
         except Exception as e:
-            history_list.setText(str(e))
+            history_list.clear()
+            history_list.addItem(str(e))
 
     def open_history():
         load_history()
         stack.setCurrentWidget(history_page)
-
 
     start_button.clicked.connect(start)
     stop_button.clicked.connect(stop)
@@ -251,7 +299,6 @@ def run():
     add_folder_button.clicked.connect(add_folder)
     remove_folder_button.clicked.connect(remove_folder)
 
-
     stack.addWidget(main_page)
     stack.addWidget(history_page)
     stack.addWidget(settings_page)
@@ -262,4 +309,4 @@ def run():
     window.setLayout(window_layout)
 
     window.show()
-    app.exec()                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
+    app.exec()
