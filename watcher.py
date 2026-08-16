@@ -4,6 +4,7 @@ from ai import analyze_image
 from actions import rename_and_move
 import time
 import json
+import os
 
 
 def get_watch_folder():
@@ -36,18 +37,56 @@ class Watcher(FileSystemEventHandler):
         if event.is_directory:
             return
 
-        if event.src_path.endswith(".crdownload"):
+        file_path = event.src_path
+        extension = os.path.splitext(file_path)[1].lower()
+
+        ignored_extensions = {
+            ".tmp",
+            ".crdownload",
+            ".part",
+            ".download"
+        }
+
+        if extension in ignored_extensions:
             return
+
+        supported_extensions = {
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".webp",
+            ".gif"
+        }
+
+        if extension not in supported_extensions:
+            return
+
+        print(f"New image: {file_path}")
 
         folders = get_watch_folders()
 
-        result = analyze_image(
-            event.src_path,
-            folders
-        )
+        try:
+            result = analyze_image(
+                file_path,
+                folders
+            )
 
-        if result:
-            rename_and_move(event.src_path, result)
+        except Exception as e:
+            print(f"AI error: {e}")
+            return
+
+        if not result:
+            print("AI did not return a result.")
+            return
+
+        try:
+            rename_and_move(
+                file_path,
+                result
+            )
+
+        except Exception as e:
+            print(f"File processing error: {e}")
 
 
 def start_watching():

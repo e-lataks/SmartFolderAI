@@ -12,13 +12,17 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QFileDialog,
     QListWidget,
-    QHBoxLayout
+    QHBoxLayout,
+    QSystemTrayIcon,
+    QMenu
 )
 from watcher import start_watching, stop_watching
+from PySide6.QtGui import QIcon, QAction
 
 
 def run():
     app = QApplication(sys.argv)
+    app.setQuitOnLastWindowClosed(False)
 
     with open("style.qss", "r", encoding="utf-8") as file:
         app.setStyleSheet(file.read())
@@ -26,8 +30,28 @@ def run():
     window = QWidget()
     window.setWindowTitle("SmartFolder AI")
     window.resize(600, 400)
+    window.setWindowIcon(QIcon("assets/icon.ico"))
 
     stack = QStackedWidget()
+
+    tray = QSystemTrayIcon(QIcon("assets/icon.ico"), window)
+
+    tray_menu = QMenu()
+
+    open_action = QAction("Open")
+    start_action = QAction("Start")
+    stop_action = QAction("Stop")
+    quit_action = QAction("Quit")
+
+    tray_menu.addAction(open_action)
+    tray_menu.addSeparator()
+    tray_menu.addAction(start_action)
+    tray_menu.addAction(stop_action)
+    tray_menu.addSeparator()
+    tray_menu.addAction(quit_action)
+
+    tray.setContextMenu(tray_menu)
+    tray.show()
 
     main_page = QWidget()
     layout = QVBoxLayout(main_page)
@@ -97,7 +121,6 @@ def run():
     settings_layout.addWidget(settings_title)
     settings_layout.addSpacing(15)
 
-
     general_label = QLabel("GENERAL")
     general_label.setObjectName("sectionTitle")
 
@@ -118,6 +141,20 @@ def run():
 
     settings_layout.addSpacing(15)
 
+    ai_label = QLabel("AI")
+    ai_label.setObjectName("sectionTitle")
+
+    api_key_label = QLabel("Gemini API Key:")
+
+    api_key_input = QLineEdit()
+    api_key_input.setEchoMode(QLineEdit.Password)
+    api_key_input.setPlaceholderText("Enter your Gemini API key")
+
+    settings_layout.addWidget(ai_label)
+    settings_layout.addWidget(api_key_label)
+    settings_layout.addWidget(api_key_input)
+
+    settings_layout.addSpacing(15)
 
     sorting_label = QLabel("AI SORTING")
     sorting_label.setObjectName("sectionTitle")
@@ -175,6 +212,10 @@ def run():
                 config.get("sort_into_folders", False)
             )
 
+            api_key_input.setText(
+                config.get("api_key", "")
+            )
+
             folders_list.clear()
 
             folders = config.get("folders", [])
@@ -223,13 +264,14 @@ def run():
         settings = {
             "watch_folder": folder_input.text(),
             "sort_into_folders": sort_checkbox.isChecked(),
+            "api_key": api_key_input.text(),
             "folders": folders
         }
 
         with open("data/config.json", "w", encoding="utf-8") as file:
             json.dump(settings, file, indent=4)
 
-        print("Settings saved:", settings)
+        print("Settings saved.")
 
     def start():
         start_watching()
@@ -244,6 +286,21 @@ def run():
         status.setText("Stopped")
         start_button.setEnabled(True)
         stop_button.setEnabled(False)
+
+    def show_window():
+        window.show()
+        window.raise_()
+        window.activateWindow()
+
+    def quit_app():
+        stop_watching()
+        tray.hide()
+        app.quit()
+
+    open_action.triggered.connect(show_window)
+    start_action.triggered.connect(start)
+    stop_action.triggered.connect(stop)
+    quit_action.triggered.connect(quit_app)
 
     def load_history():
         try:

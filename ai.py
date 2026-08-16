@@ -8,11 +8,33 @@ import json
 
 load_dotenv()
 
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+
+def get_api_key():
+    api_key = os.getenv("GEMINI_API_KEY")
+
+    if api_key:
+        return api_key
+
+    try:
+        with open("data/config.json", "r", encoding="utf-8") as file:
+            config = json.load(file)
+
+        return config.get("api_key")
+
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
 
 
 def analyze_image(image_path, folders):
     print(f"AI received image: {image_path}")
+
+    api_key = get_api_key()
+
+    if not api_key:
+        print("No Gemini API key configured.")
+        return None
+
+    client = genai.Client(api_key=api_key)
 
     time.sleep(1)
 
@@ -49,16 +71,21 @@ Rules:
 - JSON only.
 """
 
-    response = client.models.generate_content(
-        model="gemini-3.6-flash",
-        contents=[
-            prompt,
-            types.Part.from_bytes(
-                data=image,
-                mime_type=mime_type
-            )
-        ]
-    )
+    try:
+        response = client.models.generate_content(
+            model="gemini-3.6-flash",
+            contents=[
+                prompt,
+                types.Part.from_bytes(
+                    data=image,
+                    mime_type=mime_type
+                )
+            ]
+        )
+
+    except Exception as e:
+        print(f"AI error: {e}")
+        return None
 
     try:
         result = json.loads(response.text)

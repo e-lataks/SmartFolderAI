@@ -1,6 +1,12 @@
 .venv/
 .env
+.env.backup
 __pycache__/
 *.pyc
 watched/
+data/config.json
 data/history.json
+build/
+dist/
+*.spec
+*.zip
