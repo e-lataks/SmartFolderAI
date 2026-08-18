@@ -2,6 +2,7 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from ai import analyze_image
 from actions import rename_and_move
+from concurrent.futures import ThreadPoolExecutor
 import time
 import json
 import os
@@ -30,6 +31,34 @@ def get_watch_folders():
 
 
 observer = None
+executor = None
+
+
+def process_image(file_path):
+    print(f"New image: {file_path}")
+
+    folders = get_watch_folders()
+
+    try:
+        result = analyze_image(
+            file_path,
+            folders
+        )
+    except Exception as e:
+        print(f"AI error: {e}")
+        return
+
+    if not result:
+        print("AI did not return a result.")
+        return
+
+    try:
+        rename_and_move(
+            file_path,
+            result
+        )
+    except Exception as e:
+        print(f"File processing error: {e}")
 
 
 class Watcher(FileSystemEventHandler):
@@ -61,39 +90,21 @@ class Watcher(FileSystemEventHandler):
         if extension not in supported_extensions:
             return
 
-        print(f"New image: {file_path}")
-
-        folders = get_watch_folders()
-
-        try:
-            result = analyze_image(
-                file_path,
-                folders
+        if executor is not None:
+            executor.submit(
+                process_image,
+                file_path
             )
-
-        except Exception as e:
-            print(f"AI error: {e}")
-            return
-
-        if not result:
-            print("AI did not return a result.")
-            return
-
-        try:
-            rename_and_move(
-                file_path,
-                result
-            )
-
-        except Exception as e:
-            print(f"File processing error: {e}")
 
 
 def start_watching():
     global observer
+    global executor
 
     if observer is not None:
         return
+
+    executor = ThreadPoolExecutor(max_workers=2)
 
     observer = Observer()
 
@@ -112,14 +123,21 @@ def start_watching():
 
 def stop_watching():
     global observer
+    global executor
 
-    if observer is None:
-        return
+    if observer is not None:
+        observer.stop()
+        observer.join()
 
-    observer.stop()
-    observer.join()
+        observer = None
 
-    observer = None
+    if executor is not None:
+        executor.shutdown(
+            wait=False,
+            cancel_futures=True
+        )
+
+        executor = None
 
     print("Stopped watching.")
 

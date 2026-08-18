@@ -1,6 +1,9 @@
 import sys
+import tempfile
 import json
-from PySide6.QtCore import Qt
+import os
+
+from PySide6.QtCore import Qt, QLockFile
 from PySide6.QtWidgets import (
     QApplication,
     QWidget,
@@ -20,21 +23,51 @@ from watcher import start_watching, stop_watching
 from PySide6.QtGui import QIcon, QAction
 
 
+def resource_path(path):
+    if getattr(sys, "frozen", False):
+        base_path = sys._MEIPASS
+    else:
+        base_path = os.path.dirname(os.path.abspath(__file__))
+
+    return os.path.join(base_path, path)
+
+
 def run():
     app = QApplication(sys.argv)
+
+    lock_path = os.path.join(
+        tempfile.gettempdir(),
+        "SmartFolderAI.lock"
+    )
+
+    lock = QLockFile(lock_path)
+
+    if not lock.tryLock(100):
+        app.quit()
+        return
+
     app.setQuitOnLastWindowClosed(False)
 
-    with open("style.qss", "r", encoding="utf-8") as file:
+    with open(
+        resource_path("style.qss"),
+        "r",
+        encoding="utf-8"
+    ) as file:
         app.setStyleSheet(file.read())
 
     window = QWidget()
     window.setWindowTitle("SmartFolder AI")
     window.resize(600, 400)
-    window.setWindowIcon(QIcon("assets/icon.ico"))
+    window.setWindowIcon(
+        QIcon(resource_path("assets/icon.ico"))
+    )
 
     stack = QStackedWidget()
 
-    tray = QSystemTrayIcon(QIcon("assets/icon.ico"), window)
+    tray = QSystemTrayIcon(
+        QIcon(resource_path("assets/icon.ico")),
+        window
+    )
 
     tray_menu = QMenu()
 
@@ -148,7 +181,9 @@ def run():
 
     api_key_input = QLineEdit()
     api_key_input.setEchoMode(QLineEdit.Password)
-    api_key_input.setPlaceholderText("Enter your Gemini API key")
+    api_key_input.setPlaceholderText(
+        "Enter your Gemini API key"
+    )
 
     settings_layout.addWidget(ai_label)
     settings_layout.addWidget(api_key_label)
@@ -201,7 +236,11 @@ def run():
 
     def load_settings():
         try:
-            with open("data/config.json", "r", encoding="utf-8") as file:
+            with open(
+                "data/config.json",
+                "r",
+                encoding="utf-8"
+            ) as file:
                 config = json.load(file)
 
             folder_input.setText(
@@ -268,7 +307,13 @@ def run():
             "folders": folders
         }
 
-        with open("data/config.json", "w", encoding="utf-8") as file:
+        os.makedirs("data", exist_ok=True)
+
+        with open(
+            "data/config.json",
+            "w",
+            encoding="utf-8"
+        ) as file:
             json.dump(settings, file, indent=4)
 
         print("Settings saved.")
@@ -304,7 +349,11 @@ def run():
 
     def load_history():
         try:
-            with open("data/history.json", "r", encoding="utf-8") as file:
+            with open(
+                "data/history.json",
+                "r",
+                encoding="utf-8"
+            ) as file:
                 history = json.load(file)
 
             if not history:
@@ -326,7 +375,7 @@ def run():
 
         except FileNotFoundError:
             history_list.clear()
-            history_list.addItem("history.json not found.")
+            history_list.addItem("History is empty.")
 
         except Exception as e:
             history_list.clear()
